@@ -29,7 +29,7 @@ jobs:
         run: |
           # Pull a number like 1.2.3 out of the release tag (v1.2.3, TuneBar_1.2.3, ...).
           TAG="${{ github.event.release.tag_name }}"
-          VER=$(echo "$TAG" | grep -oE '[0-9]+(\.[0-9]+){0,3}' | head -n1)
+          VER=$(echo "$TAG" | grep -oE '[0-9]+(\.[0-9]+){0,3}' | head -n1 || true)
           if [ -z "$VER" ]; then VER="1.0.0"; fi
           echo "VERSION=$VER" >> "$GITHUB_ENV"
           echo "Building version $VER"
