@@ -84,7 +84,7 @@ For development:
 dotnet run --project src/TuneBar
 ```
 
-Pushing a tag like `v1.0.0` to GitHub builds both `.exe` files and attaches them to a release
+Publishing a release on GitHub builds both `.exe` files and attaches them to it automatically
 (see `.github/workflows/build.yml`).
 
 ## Contributing

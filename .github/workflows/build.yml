@@ -1,0 +1,74 @@
+name: Build
+
+# - Every push to main: builds TuneBar so you can see if the code compiles
+#   (download the .exe from the run's "Artifacts" section).
+# - Every published release (any tag name): builds TuneBar and attaches the
+#   .exe files to that release under "Assets".
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Work out version number
+        shell: bash
+        run: |
+          # Pull a number like 1.2.3 out of the release tag (v1.2.3, TuneBar_1.2.3, ...).
+          TAG="${{ github.event.release.tag_name }}"
+          VER=$(echo "$TAG" | grep -oE '[0-9]+(\.[0-9]+){0,3}' | head -n1)
+          if [ -z "$VER" ]; then VER="1.0.0"; fi
+          echo "VERSION=$VER" >> "$GITHUB_ENV"
+          echo "Building version $VER"
+
+      - name: Build x64
+        run: >
+          dotnet publish src/TuneBar/TuneBar.csproj -c Release -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ env.VERSION }}
+          -o out/x64
+
+      - name: Build ARM64
+        run: >
+          dotnet publish src/TuneBar/TuneBar.csproj -c Release -r win-arm64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ env.VERSION }}
+          -o out/arm64
+
+      - name: Rename files
+        shell: bash
+        run: |
+          mkdir dist
+          cp out/x64/TuneBar.exe dist/TuneBar-win-x64.exe
+          cp out/arm64/TuneBar.exe dist/TuneBar-win-arm64.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TuneBar
+          path: dist/*.exe
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: dist/*.exe
