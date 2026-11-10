@@ -105,6 +105,28 @@ namespace TuneBar
             return tray != IntPtr.Zero && GetWindowRect(tray, out rect);
         }
 
+        private const int GWLP_HWNDPARENT = -8;
+
+        /// <summary>
+        /// Makes the taskbar the "owner" of our window. Windows always keeps an owned window
+        /// in front of its owner, so the taskbar can no longer cover us (e.g. when Start opens).
+        /// Returns true if the owner had to be (re)set.
+        /// </summary>
+        public static bool EnsureOwnedByTaskbar(IntPtr hwnd)
+        {
+            IntPtr tray = FindWindow("Shell_TrayWnd", null);
+            if (tray == IntPtr.Zero || hwnd == IntPtr.Zero) return false;
+
+            IntPtr current = IntPtr.Size == 8
+                ? GetWindowLongPtr64(hwnd, GWLP_HWNDPARENT)
+                : new IntPtr(GetWindowLong32(hwnd, GWLP_HWNDPARENT));
+            if (current == tray) return false;
+
+            if (IntPtr.Size == 8) SetWindowLongPtr64(hwnd, GWLP_HWNDPARENT, tray);
+            else SetWindowLong32(hwnd, GWLP_HWNDPARENT, tray.ToInt32());
+            return true;
+        }
+
         public static void AddExtendedStyle(IntPtr hwnd, long flags)
         {
             if (IntPtr.Size == 8)

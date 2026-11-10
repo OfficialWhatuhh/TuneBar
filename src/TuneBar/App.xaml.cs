@@ -67,6 +67,29 @@ namespace TuneBar
             }
         }
 
+        public static bool IsExiting { get; private set; }
+
+        public static void ExitApp()
+        {
+            IsExiting = true;
+            Current.Shutdown();
+        }
+
+        /// <summary>Brings the widget back if its window got destroyed (e.g. Explorer restarted).</summary>
+        public static void RecreateWidgetSoon()
+        {
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            timer.Tick += (_, _) =>
+            {
+                timer.Stop();
+                if (IsExiting) return;
+                var widget = new MainWindow();
+                Current.MainWindow = widget;
+                widget.Show();
+            };
+            timer.Start();
+        }
+
         public static void ShowSettings()
         {
             if (_settingsWindow == null)
@@ -83,6 +106,7 @@ namespace TuneBar
 
         protected override void OnExit(ExitEventArgs e)
         {
+            IsExiting = true;
             if (_ownsMutex) _mutex?.ReleaseMutex();
             _mutex?.Dispose();
             base.OnExit(e);

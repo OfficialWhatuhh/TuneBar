@@ -279,6 +279,6 @@ namespace TuneBar
 
         private void Done_Click(object sender, RoutedEventArgs e) => Close();
 
-        private void Exit_Click(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
+        private void Exit_Click(object sender, RoutedEventArgs e) => App.ExitApp();
     }
 }

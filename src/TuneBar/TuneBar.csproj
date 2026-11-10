@@ -10,7 +10,7 @@
     <AssemblyName>TuneBar</AssemblyName>
     <RootNamespace>TuneBar</RootNamespace>
     <ApplicationIcon>Assets\TuneBar.ico</ApplicationIcon>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Product>TuneBar</Product>
     <Description>A tiny Spotify mini-player that lives on your Windows taskbar.</Description>
     <Copyright>MIT License</Copyright>

@@ -65,6 +65,7 @@ namespace TuneBar
         {
             _hwnd = new WindowInteropHelper(this).Handle;
             NativeMethods.AddExtendedStyle(_hwnd, NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE);
+            NativeMethods.EnsureOwnedByTaskbar(_hwnd);
         }
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -101,6 +102,9 @@ namespace TuneBar
 
         private void OnClosed(object? sender, EventArgs e)
         {
+            // If Explorer crashes/restarts it can take our window with it: come back.
+            if (!App.IsExiting) App.RecreateWidgetSoon();
+
             _followTimer.Stop();
             _slowTimer.Stop();
             S.Changed -= OnSettingsChanged;
@@ -272,11 +276,8 @@ namespace TuneBar
             if (_hwnd == IntPtr.Zero || !_shown) return;
             if (_menuOpen || _volumeDragging || _mouseDown) return;
 
-            // Don't cover the Start menu, search, or tray pop-ups.
-            string fg = NativeMethods.ForegroundClass();
-            if (fg is "Windows.UI.Core.CoreWindow" or "XamlExplorerHostIslandWindow"
-                or "TopLevelWindowForOverflowXamlIsland" or "NotifyIconOverflowWindow")
-                return;
+            // If Explorer restarted there's a new taskbar: attach to it again.
+            NativeMethods.EnsureOwnedByTaskbar(_hwnd);
 
             NativeMethods.MakeTopmost(_hwnd);
         }
@@ -546,6 +547,6 @@ namespace TuneBar
 
         private void MiOpenSpotify_Click(object sender, RoutedEventArgs e) => OpenSpotify();
 
-        private void MiExit_Click(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
+        private void MiExit_Click(object sender, RoutedEventArgs e) => App.ExitApp();
     }
 }
