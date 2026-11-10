@@ -1,7 +1,0 @@
-<Application x:Class="TuneBar.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Application.Resources>
-        <!-- Real colours are filled in by Theme.cs (light/dark aware). -->
-    </Application.Resources>
-</Application>
