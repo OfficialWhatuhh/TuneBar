@@ -2,17 +2,22 @@ name: Build
 
 # - Every push to main: builds TuneBar so you can see if the code compiles
 #   (download the .exe from the run's "Artifacts" section).
-# - Every published release (any tag name): builds TuneBar and attaches the
-#   .exe files to that release under "Assets".
+# - Pushing a tag like v1.2.0: builds TuneBar and creates a release with the .exe files.
+# - Every release published on the website (any tag name): builds TuneBar and
+#   attaches the .exe files to that release under "Assets".
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   release:
     types: [published]
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
 
 jobs:
   build:
@@ -28,7 +33,7 @@ jobs:
         shell: bash
         run: |
           # Pull a number like 1.2.3 out of the release tag (v1.2.3, TuneBar_1.2.3, ...).
-          TAG="${{ github.event.release.tag_name }}"
+          TAG="${{ github.event.release.tag_name || github.ref_name }}"
           VER=$(echo "$TAG" | grep -oE '[0-9]+(\.[0-9]+){0,3}' | head -n1 || true)
           if [ -z "$VER" ]; then VER="1.0.0"; fi
           echo "VERSION=$VER" >> "$GITHUB_ENV"
@@ -66,9 +71,18 @@ jobs:
           name: TuneBar
           path: dist/*.exe
 
-      - name: Attach to the release
-        if: github.event_name == 'release'
+      - name: Create the release / attach the files
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.release.tag_name }}
+          tag_name: ${{ github.event.release.tag_name || github.ref_name }}
+          name: TuneBar ${{ env.VERSION }}
           files: dist/*.exe
+          make_latest: true
+          body: |
+            A Spotify mini-player that lives in your Windows taskbar.
+
+            **Download:** `TuneBar-win-x64.exe` (most PCs) or `TuneBar-win-arm64.exe` (ARM PCs like Snapdragon laptops).
+            No install needed: put it in a folder where it can stay and double-click it.
+
+            If Windows says it protected your PC, click **More info**, then **Run anyway**.
