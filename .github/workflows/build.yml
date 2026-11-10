@@ -1,14 +1,14 @@
 name: Build
 
-# - Every push to main: builds TuneBar so you can see if the code compiles
-#   (download the .exe from the run's "Artifacts" section).
-# - Pushing a tag like v1.2.0: builds TuneBar and creates a release with the .exe files.
-# - Every release published on the website (any tag name): builds TuneBar and
-#   attaches the .exe files to that release under "Assets".
+# Every push to main builds TuneBar.
+# If the <Version> in src/TuneBar/TuneBar.csproj hasn't been released yet,
+# a release called vX.Y.Z is created automatically with the .exe files attached.
+# So to ship an update: bump <Version> in the .csproj and push.
+#
+# Releases you publish by hand on the website also get the .exe files attached.
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   release:
     types: [published]
   workflow_dispatch:
@@ -24,20 +24,36 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
 
-      - name: Work out version number
+      - name: Work out version and whether to release
         shell: bash
         run: |
-          # Pull a number like 1.2.3 out of the release tag (v1.2.3, TuneBar_1.2.3, ...).
-          TAG="${{ github.event.release.tag_name || github.ref_name }}"
-          VER=$(echo "$TAG" | grep -oE '[0-9]+(\.[0-9]+){0,3}' | head -n1 || true)
-          if [ -z "$VER" ]; then VER="1.0.0"; fi
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+            VER=$(echo "$TAG" | grep -oE '[0-9]+(\.[0-9]+){0,3}' | head -n1 || true)
+            [ -z "$VER" ] && VER="1.0.0"
+            RELEASE=true
+          else
+            VER=$(grep -oE '<Version>[^<]+</Version>' src/TuneBar/TuneBar.csproj | sed -E 's#</?Version>##g' | head -n1 || true)
+            [ -z "$VER" ] && VER="1.0.0"
+            TAG="v$VER"
+            if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+              RELEASE=false
+              echo "$TAG already released, just building."
+            else
+              RELEASE=true
+              echo "$TAG not released yet, will create it."
+            fi
+          fi
           echo "VERSION=$VER" >> "$GITHUB_ENV"
-          echo "Building version $VER"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
 
       - name: Build x64
         run: >
@@ -71,11 +87,19 @@ jobs:
           name: TuneBar
           path: dist/*.exe
 
-      - name: Create the release / attach the files
-        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
+      - name: Attach to the release (published on the website)
+        if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.release.tag_name || github.ref_name }}
+          tag_name: ${{ env.TAG }}
+          files: dist/*.exe
+
+      - name: Create the release
+        if: github.event_name != 'release' && env.RELEASE == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          target_commitish: ${{ github.sha }}
           name: TuneBar ${{ env.VERSION }}
           files: dist/*.exe
           make_latest: true
