@@ -98,6 +98,13 @@ namespace TuneBar
             return true;
         }
 
+        public static bool TryGetTaskbarHandle(out IntPtr tray, out RECT rect)
+        {
+            rect = default;
+            tray = FindWindow("Shell_TrayWnd", null);
+            return tray != IntPtr.Zero && GetWindowRect(tray, out rect);
+        }
+
         public static void AddExtendedStyle(IntPtr hwnd, long flags)
         {
             if (IntPtr.Size == 8)

@@ -65,6 +65,10 @@ namespace TuneBar
                 InTaskbarRadio.IsChecked = !S.AboveTaskbar;
                 AboveRadio.IsChecked = S.AboveTaskbar;
 
+                AutoFitToggle.IsChecked = S.AutoFit;
+                OffsetSlider.IsEnabled = !S.AutoFit || S.AboveTaskbar;
+                OffsetSlider.Opacity = OffsetSlider.IsEnabled ? 1 : 0.4;
+
                 OffsetSlider.Maximum = Math.Max(0, SystemParameters.PrimaryScreenWidth - S.WidgetWidth);
                 OffsetSlider.Value = Math.Min(S.OffsetX, OffsetSlider.Maximum);
                 WidthSlider.Value = S.WidgetWidth;
@@ -92,7 +96,9 @@ namespace TuneBar
         private void UpdateLabels()
         {
             OffsetLabel.Text = $"Distance from the left edge: {Math.Round(OffsetSlider.Value)} px";
-            WidthLabel.Text = $"Width: {Math.Round(WidthSlider.Value)} px";
+            WidthLabel.Text = S.AutoFit && !S.AboveTaskbar
+                ? $"Maximum width: {Math.Round(WidthSlider.Value)} px (shrinks to fit)"
+                : $"Width: {Math.Round(WidthSlider.Value)} px";
             OpacityLabel.Text = $"Background opacity: {Math.Round(OpacitySlider.Value)}%";
         }
 
@@ -143,6 +149,14 @@ namespace TuneBar
         {
             S.AboveTaskbar = AboveRadio.IsChecked == true;
             Commit();
+            LoadValues();
+        }
+
+        private void AutoFitToggle_Click(object sender, RoutedEventArgs e)
+        {
+            S.AutoFit = AutoFitToggle.IsChecked == true;
+            Commit();
+            LoadValues();
         }
 
         private void OffsetSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

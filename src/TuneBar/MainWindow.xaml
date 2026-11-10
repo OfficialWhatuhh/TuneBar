@@ -56,7 +56,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Grid Background="Transparent">
-                            <Ellipse x:Name="Circle" Width="28" Height="28" Fill="{DynamicResource FgBrush}" />
+                            <Ellipse x:Name="Circle" Width="28" Height="28" Fill="{DynamicResource AccentBrush}" />
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Grid>
                         <ControlTemplate.Triggers>

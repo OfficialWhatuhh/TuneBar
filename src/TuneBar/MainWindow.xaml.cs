@@ -45,6 +45,10 @@ namespace TuneBar
 
         private bool _volumeDragging, _menuOpen;
 
+        // free space on the taskbar (physical px, relative to taskbar left), refreshed in the background
+        private volatile object? _zone;
+        private bool _zoneBusy;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -82,6 +86,7 @@ namespace TuneBar
             }
 
             UpdateVolumeUi();
+            RefreshZone();
             await RefreshMediaAsync();
 
             _followTimer.Tick += (_, _) =>
@@ -128,6 +133,7 @@ namespace TuneBar
         {
             _tick++;
             _fullscreen = _hwnd != IntPtr.Zero && NativeMethods.IsForegroundFullscreen(_hwnd);
+            if (_tick % 4 == 1) RefreshZone();
 
             if (!_volumeDragging && _tick % 2 == 0) UpdateVolumeUi();
 
@@ -184,7 +190,26 @@ namespace TuneBar
                 top = shown ? work.Bottom - height - 6 : SystemParameters.PrimaryScreenHeight + 20;
             }
 
-            left = Math.Max(_anchorLeft, Math.Min(_anchorLeft + S.OffsetX, _anchorRight - width));
+            if (S.AutoFit && !S.AboveTaskbar && horizontal && _zone is TaskbarLayout.Zone z)
+            {
+                // Sit in the gap between the Widgets button and Start, shrinking if needed.
+                const double gap = 6;
+                double zoneLeft = _anchorLeft + z.Left / scale + gap;
+                double zoneWidth = z.Width / scale - gap * 2;
+                if (zoneWidth >= 200)
+                {
+                    width = Math.Min(width, zoneWidth);
+                    left = zoneLeft;
+                }
+                else
+                {
+                    left = Math.Max(_anchorLeft, Math.Min(_anchorLeft + S.OffsetX, _anchorRight - width));
+                }
+            }
+            else
+            {
+                left = Math.Max(_anchorLeft, Math.Min(_anchorLeft + S.OffsetX, _anchorRight - width));
+            }
 
             bool changed = force
                            || Math.Abs(left - _lastLeft) > 0.5 || Math.Abs(top - _lastTop) > 0.5
@@ -204,6 +229,8 @@ namespace TuneBar
 
             Width = width;
             Height = height;
+            // Not much room: drop the volume slider (the speaker button still mutes, and scrolling still works).
+            VolumeBar.Visibility = width < 330 ? Visibility.Collapsed : Visibility.Visible;
             Left = left;
             Top = top;
             _lastLeft = left;
@@ -213,6 +240,27 @@ namespace TuneBar
 
             // While the taskbar slides in, keep putting ourselves in front of it.
             if (shown && (becameVisible || force || !_menuOpen)) NativeMethods.MakeTopmost(_hwnd);
+        }
+
+        /// <summary>Measures the gap between the Widgets and Start buttons (in the background).</summary>
+        private void RefreshZone()
+        {
+            if (_zoneBusy || !S.AutoFit || S.AboveTaskbar || !_shown) return;
+            _zoneBusy = true;
+            Task.Run(() =>
+            {
+                var zone = TaskbarLayout.FindFreeZone();
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    _zoneBusy = false;
+                    object? boxed = zone;
+                    if (!Equals(boxed, _zone))
+                    {
+                        _zone = boxed;
+                        FollowTaskbar(force: true);
+                    }
+                }));
+            });
         }
 
         /// <summary>
@@ -483,6 +531,7 @@ namespace TuneBar
             {
                 _moved = false;
                 S.OffsetX = Math.Max(0, Left - _anchorLeft);
+                S.AutoFit = false; // the user picked a spot by hand
                 S.Commit();
             }
         }

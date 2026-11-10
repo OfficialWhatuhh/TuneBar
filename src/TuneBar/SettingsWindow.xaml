@@ -281,7 +281,13 @@
                                          Content="Floating above the taskbar" Click="Position_Click" />
                         </WrapPanel>
                         <TextBlock Style="{StaticResource Hint}"
-                                   Text="Inside the taskbar, TuneBar hides and shows together with an auto-hiding taskbar. Tip: you can also just drag the widget sideways." />
+                                   Text="Inside the taskbar, TuneBar hides and shows together with an auto-hiding taskbar." />
+
+                        <CheckBox x:Name="AutoFitToggle" Style="{StaticResource Toggle}" Margin="0,12,0,0"
+                                  Content="Fit automatically between the weather button and Start"
+                                  Click="AutoFitToggle_Click" />
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="Works with centered taskbar icons on Windows 11. Dragging the widget turns this off." />
 
                         <TextBlock x:Name="OffsetLabel" Text="Distance from the left edge" Style="{StaticResource Label}" />
                         <Slider x:Name="OffsetSlider" Style="{StaticResource ModernSlider}"

@@ -19,6 +19,8 @@ namespace TuneBar
         /// <summary>Distance from the left edge of the taskbar, in DIPs.</summary>
         public double OffsetX { get; set; }
         public double WidgetWidth { get; set; } = 380;
+        /// <summary>Fit into the gap between the Widgets button and Start (Windows 11, centered icons).</summary>
+        public bool AutoFit { get; set; } = true;
 
         // ---- colors
         /// <summary>"Auto" (match Windows), "Dark", "Light" or "Custom".</summary>
