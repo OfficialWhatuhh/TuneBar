@@ -1,0 +1,69 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Work out version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=0.0.0-dev" >> "$GITHUB_ENV"
+          fi
+
+      - name: Publish x64
+        run: >
+          dotnet publish src/TuneBar/TuneBar.csproj -c Release -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ env.VERSION }}
+          -o out/x64
+
+      - name: Publish ARM64
+        run: >
+          dotnet publish src/TuneBar/TuneBar.csproj -c Release -r win-arm64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ env.VERSION }}
+          -o out/arm64
+
+      - name: Rename files
+        shell: bash
+        run: |
+          mkdir dist
+          cp out/x64/TuneBar.exe dist/TuneBar-win-x64.exe
+          cp out/arm64/TuneBar.exe dist/TuneBar-win-arm64.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TuneBar
+          path: dist/*.exe
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          generate_release_notes: true
